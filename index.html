@@ -208,23 +208,23 @@
             ],
             
             // NEW, FIXED CODE
-nextScene: function() {
-    // BUG FIX: Add a guard to prevent advancing past the last scene.
-    if (sceneConfig.currentScene >= sceneConfig.scenes.length - 1) {
-        return; 
-    }
-    if (gameContainer.firstElementChild) {
-        gameContainer.firstElementChild.classList.add('fade-out');
-    }
-    setTimeout(() => {
-        sceneConfig.currentScene++;
-        const current = sceneConfig.scenes[sceneConfig.currentScene];
-        if (current) {
-            current.render();
-            if (current.action) current.action();
-        }
-    }, 1000);
-},
+            nextScene: function() {
+                // BUG FIX: Add a guard to prevent advancing past the last scene.
+                if (sceneConfig.currentScene >= sceneConfig.scenes.length - 1) {
+                    return; 
+                }
+                if (gameContainer.firstElementChild) {
+                    gameContainer.firstElementChild.classList.add('fade-out');
+                }
+                setTimeout(() => {
+                    sceneConfig.currentScene++;
+                    const current = sceneConfig.scenes[sceneConfig.currentScene];
+                    if (current) {
+                        current.render();
+                        if (current.action) current.action();
+                    }
+                }, 1000);
+            },
 
             selectOption: function(element) {
                 const options = document.querySelectorAll('.option-card');
