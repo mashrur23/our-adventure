@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Adventure</title>
+    <!-- Chosen Palette: Midnight Blue & Gold -->
+    <!-- Application Structure Plan: The structure is a linear, four-scene narrative. A final, fifth scene was added to call the Gemini API twice: first, to generate a symbolic 'constellation myth', and second, to call Imagen to generate a visual representation of that myth as a stunning background, creating a deeply personal and multi-sensory conclusion. -->
+    <!-- Visualization & Content Choices: Report Info: "Hey Sraya..." -> Goal: Invitation -> Method: Button (HTML/CSS). Justification: Clear start. Report Info: Memory question -> Goal: Recall shared joy -> Method: Interactive image cards (HTML/CSS/JS). Justification: Engages with visuals. Report Info: The confession text -> Goal: Deliver core message -> Method: Timed text reveals (JS). Justification: Creates cinematic pacing. Report Info: The question -> Goal: Clear call to action -> Method: Buttons. Report Info: "Our Constellation" -> Goal: Create a shared symbol -> Method: Call Gemini API for text, then Imagen API for an image. Justification: The text creates the story, and the generated image provides a breathtaking visual payoff, making the moment unforgettable. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1a202c;
+            overflow: hidden;
+            background-image: none;
+            background-size: cover;
+            background-position: center center;
+            transition: background-image 1.5s ease-in-out;
+        }
+        .text-glow {
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 0 20px rgba(251, 191, 36, 0.4);
+        }
+        .button-glow {
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+            transition: all 0.3s ease;
+        }
+        .button-glow:hover {
+            box-shadow: 0 0 25px rgba(251, 191, 36, 0.8);
+            transform: translateY(-2px);
+        }
+        .fade-in {
+            animation: fadeIn 1.5s ease-out forwards;
+        }
+        .fade-out {
+            animation: fadeOut 1s ease-in forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+        .option-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .option-card:hover {
+            transform: scale(1.05);
+            background-color: #4a5568;
+        }
+        .option-card img {
+             pointer-events: none;
+        }
+        .constellation-card {
+            background-color: rgba(26, 32, 44, 0.8);
+            border: 1px solid #4a5568;
+            backdrop-filter: blur(10px);
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            width: 100vw;
+            height: 100vh;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #f59e0b;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-white flex items-center justify-center min-h-screen">
+    <canvas id="particle-canvas"></canvas>
+    <audio id="background-audio" loop>
+        <source src="https://www.dropbox.com/scl/fi/r0rer4zy7a1411e3850ad/Sattola-School-Road.mp3?rlkey=1jgjffe0hu82g4lwfuprhs4ly&st=vhyin2zv&dl=1" type="audio/mpeg">
+    </audio>
+    <div id="game-container" class="w-full max-w-3xl mx-auto p-4 text-center">
+        <!-- Content will be injected by JavaScript -->
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const audio = document.getElementById('background-audio');
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        let particles = [];
+        let confetti = [];
+        let animationFrameId;
+
+        const sceneConfig = {
+            currentScene: 0,
+            scenes: [
+                { // Scene 1: Invitation
+                    render: function() {
+                        gameContainer.innerHTML = `
+                            <div class="fade-in">
+                                <h1 class="text-3xl md:text-5xl font-light mb-8 text-glow">Hey Sraya...</h1>
+                                <p class="text-lg md:text-xl mb-12 text-gray-300">I made a little something for you.</p>
+                                <button onclick="sceneConfig.nextScene()" class="bg-amber-400 text-gray-900 font-bold py-3 px-8 rounded-full text-lg button-glow">Start Our Adventure</button>
+                            </div>
+                        `;
+                    },
+                    action: function() {
+                        audio.volume = 0.3;
+                        audio.play().catch(e => console.log("Audio play failed:", e));
+                        startParticles();
+                    }
+                },
+                { // Scene 2: Memory Lane with Images
+                    render: function() {
+                        gameContainer.innerHTML = `
+                            <div class="fade-in">
+                                <h2 class="text-2xl md:text-3xl mb-8 text-gray-200">Remember that day on our tour...<br>what was your favorite moment?</h2>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div onclick="sceneConfig.selectOption(this)" class="option-card bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col justify-between">
+                                        <img src="https://i.postimg.cc/R00DLXxT/ratargul.jpg" alt="Memory of Ratargul" class="rounded-md mb-3 object-cover h-48 w-full">
+                                        <p class="option-text">Hanging on a tree at Ratargul</p>
+                                    </div>
+                                    <div onclick="sceneConfig.selectOption(this)" class="option-card bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col justify-between">
+                                        <img src="https://i.postimg.cc/qRPygMG3/boat-ride.jpg" alt="Memory of the boat ride" class="rounded-md mb-3 object-cover h-48 w-full">
+                                        <p class="option-text">Boat ride</p>
+                                    </div>
+                                    <div onclick="sceneConfig.selectOption(this)" class="option-card bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col justify-between">
+                                        <img src="https://i.postimg.cc/hvV4sSRT/jaflong.jpg" alt="Memory of the sunset at Jaflong" class="rounded-md mb-3 object-cover h-48 w-full">
+                                        <p class="option-text">Sunset at Jaflong</p>
+                                    </div>
+                                </div>
+                                <div id="follow-up" class="mt-8 text-xl text-amber-300 opacity-0 transition-opacity duration-1000"></div>
+                            </div>
+                        `;
+                    }
+                },
+                { // Scene 3: The Confession
+                    render: function() {
+                        gameContainer.innerHTML = `<div id="confession-text" class="text-2xl md:text-4xl font-light leading-relaxed"></div>`;
+                        const confessionContainer = gameContainer.querySelector('#confession-text');
+                        const lines = [
+                            "I know you've been wondering where things stand.",
+                            "And I was confused.",
+                            "...",
+                            "We know that all good things take time.",
+                            "So i took my time, thought about things deeply and found that ....",
+                            "You're the one I can't stop thinking about.",
+                            "The one I want to share more adventures with.",
+                            "I really, really like you, Sraya."
+                        ];
+                        let i = 0;
+                        const interval = setInterval(() => {
+                            if (i < lines.length) {
+                                const lineElem = document.createElement('p');
+                                lineElem.className = 'fade-in';
+                                lineElem.innerText = lines[i];
+                                if (lines[i] === '...') lineElem.style.height = '2rem';
+                                if (confessionContainer) confessionContainer.appendChild(lineElem);
+                                i++;
+                            } else {
+                                clearInterval(interval);
+                                setTimeout(() => sceneConfig.nextScene(), 2000);
+                            }
+                        }, 2500);
+                    }
+                },
+                { // Scene 4: The Question
+                    render: function() {
+                        gameContainer.innerHTML = `
+                            <div class="fade-in">
+                                <h1 class="text-4xl md:text-6xl font-bold mb-12 text-glow">Will you be my girlfriend?</h1>
+                                <div class="flex justify-center gap-4">
+                                     <button onclick="sceneConfig.endGame(true)" class="bg-pink-500 text-white font-bold py-4 px-10 rounded-full text-xl button-glow">yes ❤️</button>
+                                     <button onclick="sceneConfig.endGame(true)" class="bg-green-500 text-white font-bold py-4 px-10 rounded-full text-xl button-glow">YES (but in capital)</button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                },
+                { // Scene 5: End Scene (Yes)
+                    render: function() {
+                        gameContainer.innerHTML = `
+                            <div class="fade-in">
+                                <div class="text-4xl text-green-400 text-glow mb-12">You just made my world. 😊</div>
+                                <button onclick="generateConstellationStory()" class="bg-amber-400 text-gray-900 font-bold py-3 px-8 rounded-full text-lg button-glow">✨ Discover Our Constellation ✨</button>
+                                <div id="gemini-output" class="mt-8"></div>
+                             </div>`;
+                        stopParticles();
+                        startConfetti();
+                    }
+                }
+            ],
+            
+            nextScene: function() {
+                if (gameContainer.firstElementChild) {
+                    gameContainer.firstElementChild.classList.add('fade-out');
+                }
+                setTimeout(() => {
+                    sceneConfig.currentScene++;
+                    const current = sceneConfig.scenes[sceneConfig.currentScene];
+                    if (current) {
+                        current.render();
+                        if (current.action) current.action();
+                    }
+                }, 1000);
+            },
+
+            selectOption: function(element) {
+                const options = document.querySelectorAll('.option-card');
+                options.forEach(opt => {
+                    if (opt !== element) opt.classList.add('fade-out');
+                    opt.style.pointerEvents = 'none';
+                });
+
+                const followUp = document.getElementById('follow-up');
+                const selectedText = element.querySelector('.option-text').innerText;
+
+                setTimeout(() => {
+                    followUp.innerHTML = `<p class="fade-in">${selectedText}? You're right, that was amazing. But honestly...</p>`;
+                    followUp.style.opacity = '1';
+                }, 500);
+                setTimeout(() => {
+                     followUp.innerHTML += `<p class="fade-in mt-4">...the best part of that day, and every day we've spent together, has simply been being with you.</p>`;
+                }, 2500);
+                setTimeout(() => {
+                    const nextButton = document.createElement('button');
+                    nextButton.innerText = 'Next';
+                    nextButton.className = 'fade-in mt-8 bg-amber-400 text-gray-900 font-bold py-2 px-6 rounded-full button-glow';
+                    nextButton.onclick = () => sceneConfig.nextScene();
+                    followUp.appendChild(nextButton);
+                }, 5000);
+            },
+
+            endGame: function(isYes) {
+                if(gameContainer.firstElementChild) {
+                    gameContainer.firstElementChild.classList.add('fade-out');
+                }
+                setTimeout(() => {
+                    if (isYes) {
+                        sceneConfig.currentScene = 4; // Go to the 'Yes' scene
+                        const current = sceneConfig.scenes[sceneConfig.currentScene];
+                        current.render();
+                    }
+                }, 1000);
+            }
+        };
+
+        async function generateConstellationStory() {
+            const outputContainer = document.getElementById('gemini-output');
+            if (!outputContainer) return;
+
+            outputContainer.innerHTML = `<div class="loader"></div><p class="text-amber-300">Gazing at the stars for us...</p>`;
+            
+            const textPrompt = "You are an ancient, wise astronomer. A new couple named Navid and Sraya has just begun their journey, born from memories of boat rides, sunsets, and adventures in nature. Create a new, unique constellation to represent their bond. Provide a fitting, beautiful name for the constellation and a short, one-paragraph 'myth' about its origin and what it represents for their future.";
+            
+            const textPayload = {
+                contents: [{ role: "user", parts: [{ text: textPrompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "constellationName": { "type": "STRING" },
+                            "myth": { "type": "STRING" }
+                        },
+                        required: ["constellationName", "myth"]
+                    }
+                }
+            };
+            const apiKey = "";
+            const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                // First, generate the text story
+                const textResponse = await fetch(textApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(textPayload)
+                });
+
+                if (!textResponse.ok) throw new Error(`Text API failed: ${textResponse.status}`);
+                const textResult = await textResponse.json();
+                
+                if (!textResult.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    throw new Error("Unexpected text API response structure.");
+                }
+
+                const jsonText = textResult.candidates[0].content.parts[0].text;
+                const story = JSON.parse(jsonText);
+                
+                // Display the story first
+                let htmlResult = `
+                    <div class="constellation-card p-6 rounded-lg fade-in text-left">
+                        <h2 class="text-3xl text-center text-amber-300 text-glow mb-4">${story.constellationName}</h2>
+                        <p class="text-gray-200 leading-relaxed">${story.myth}</p>
+                    </div>
+                    <div id="image-loader" class="mt-8 fade-in">
+                         <div class="loader"></div>
+                         <p class="text-amber-300">And now, bringing our stars to life...</p>
+                    </div>
+                `;
+                outputContainer.innerHTML = htmlResult;
+
+                // Now, generate the image based on the story
+                const imagePrompt = `An artistic digital painting of a beautiful, glowing star constellation named '${story.constellationName}'. The background is a breathtaking deep space nebula with hints of gold and dark blue, inspired by a romantic sunset over water. The overall mood is epic, magical, and deeply romantic. ${story.myth}`;
+                const imagePayload = { instances: [{ prompt: imagePrompt }], parameters: { "sampleCount": 1} };
+                const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+                const imageResponse = await fetch(imageApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(imagePayload)
+                });
+                
+                if (!imageResponse.ok) throw new Error(`Image API failed: ${imageResponse.status}`);
+                const imageResult = await imageResponse.json();
+
+                if (!imageResult.predictions?.[0]?.bytesBase64Encoded) {
+                    throw new Error("Unexpected image API response structure.");
+                }
+
+                const imageData = imageResult.predictions[0].bytesBase64Encoded;
+                document.body.style.backgroundImage = `url(data:image/png;base64,${imageData})`;
+                
+                const imageLoader = document.getElementById('image-loader');
+                if (imageLoader) imageLoader.remove();
+
+
+            } catch (error) {
+                console.error("Error during generation:", error);
+                outputContainer.innerHTML = `<p class="text-red-400">The stars are a bit cloudy tonight. But our story will be bright. ❤️</p>`;
+            }
+        }
+
+        // --- All the canvas animation functions remain the same ---
+        function startParticles(){for(let i=0;i<50;i++)particles.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,vx:Math.random()*.2-.1,vy:Math.random()*.2-.1,radius:Math.random()*1.5+.5,alpha:Math.random()*.5+.2});animateParticles()}function animateParticles(){ctx.clearRect(0,0,canvas.width,canvas.height);particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>canvas.width)p.vx*=-1;if(p.y<0||p.y>canvas.height)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);ctx.fillStyle=`rgba(251, 191, 36, ${p.alpha})`;ctx.fill()});animationFrameId=requestAnimationFrame(animateParticles)}function stopParticles(){cancelAnimationFrame(animationFrameId);ctx.clearRect(0,0,canvas.width,canvas.height);particles=[]}function startConfetti(){const t=["#f44336","#e91e63","#9c27b0","#673ab7","#3f51b5","#2196f3","#03a9f4","#00bcd4","#009688","#4caf50","#8bc34a","#cddc39","#ffeb3b","#ffc107","#ff9800"];for(let i=0;i<200;i++)confetti.push({x:Math.random()*canvas.width,y:-Math.random()*canvas.height,w:Math.random()*10+5,h:Math.random()*20+5,vy:Math.random()*3+2,angle:Math.random()*Math.PI*2,color:t[Math.floor(Math.random()*t.length)]});animateConfetti()}function animateConfetti(){ctx.clearRect(0,0,canvas.width,canvas.height);const t=[];for(const o of confetti){o.y+=o.vy;o.angle+=.05;if(o.y<canvas.height+20){t.push(o);ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.angle);ctx.fillStyle=o.color;ctx.fillRect(-o.w/2,-o.h/2,o.w,o.h);ctx.restore()}}
+confetti=t;if(confetti.length>0)requestAnimationFrame(animateConfetti)}window.addEventListener("resize",()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight});sceneConfig.scenes[sceneConfig.currentScene].render();
+    </script>
+</body>
+</html>
