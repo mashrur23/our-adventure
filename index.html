@@ -256,24 +256,15 @@
                 if(gameContainer.firstElementChild) {
                     gameContainer.firstElementChild.classList.add('fade-out');
                 }
-               // NEW, FIXED CODE
-nextScene: function() {
-    // BUG FIX: Add a guard to prevent advancing past the last scene.
-    if (sceneConfig.currentScene >= sceneConfig.scenes.length - 1) {
-        return; 
-    }
-    if (gameContainer.firstElementChild) {
-        gameContainer.firstElementChild.classList.add('fade-out');
-    }
-    setTimeout(() => {
-        sceneConfig.currentScene++;
-        const current = sceneConfig.scenes[sceneConfig.currentScene];
-        if (current) {
-            current.render();
-            if (current.action) current.action();
-        }
-    }, 1000);
-},
+                setTimeout(() => {
+                    if (isYes) {
+                        sceneConfig.currentScene = 4; // Go to the 'Yes' scene
+                        const current = sceneConfig.scenes[sceneConfig.currentScene];
+                        current.render();
+                    }
+                }, 1000);
+            }
+        };
 
         async function generateConstellationStory() {
             const outputContainer = document.getElementById('gemini-output');
